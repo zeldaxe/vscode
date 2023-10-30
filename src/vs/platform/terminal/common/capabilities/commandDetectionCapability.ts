@@ -372,7 +372,11 @@ export class CommandDetectionCapability extends Disposable implements ICommandDe
 
 		// On Windows track all cursor movements after the command start sequence
 		this._commandMarkers.length = 0;
-
+		let priorPrompt;
+		if (this.commands.length) {
+			priorPrompt = this.commands[this.commands.length - 1];
+			this._logService.info('prior prompt', priorPrompt.commandStartLineContent);
+		}
 		let prompt: string | undefined = this._getWindowsPrompt();
 		// Conpty could have the wrong cursor position at this point.
 		if (!this._cursorOnNextLine() || !prompt) {
@@ -439,19 +443,19 @@ export class CommandDetectionCapability extends Disposable implements ICommandDe
 		return cursorYAbsolute > lastCommandYAbsolute;
 	}
 
-	private _getWindowsPrompt(): string | undefined {
+	private _getWindowsPrompt(priorPrompt?: string): string | undefined {
 		const line = this._terminal.buffer.active.getLine(this._terminal.buffer.active.baseY + this._terminal.buffer.active.cursorY);
 		if (!line) {
 			return;
 		}
-		// TODO: fine tune prompt regex to accomodate for unique configurations.
 		const lineText = line.translateToString(true);
 		if (!lineText) {
 			return;
 		}
 
 		// PowerShell
-		const pwshMatch = lineText.match(/(?<prompt>(\(.+\)\s)?(?:PS.+>\s?))/);
+		this._logService.info('prior prompt match', priorPrompt ? lineText.match(priorPrompt) : 'nope');
+		const pwshMatch = lineText.match(/(?<prompt>(\(.+\)\s)?(?:PS.+>\s?))/) || priorPrompt && lineText.match(priorPrompt);
 		if (pwshMatch) {
 			let prompt = pwshMatch?.groups?.prompt;
 			if (lineText === prompt && prompt.endsWith('>')) {
