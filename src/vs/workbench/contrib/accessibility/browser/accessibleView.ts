@@ -76,15 +76,17 @@ export const IAccessibleViewService = createDecorator<IAccessibleViewService>('a
 export interface IAccessibleViewService {
 	readonly _serviceBrand: undefined;
 	show(provider: IAccessibleContentProvider, position?: Position): void;
-	showLastProvider(id: AccessibleViewProviderId): void;
+	showLastProvider(id: AccessibleViewProviderId, symbol?: IAccessibleViewSymbol): void;
 	showAccessibleViewHelp(): void;
 	next(): void;
 	previous(): void;
 	goToSymbol(): void;
+	getSymbols(type: string): IAccessibleViewSymbol[] | undefined;
 	disableHint(): void;
 	getPosition(id: AccessibleViewProviderId): Position | undefined;
 	setPosition(position: Position, reveal?: boolean): void;
 	getLastPosition(): Position | undefined;
+	getCurrentProvider(): AccessibleViewProviderId | undefined;
 	/**
 	 * If the setting is enabled, provides the open accessible view hint as a localized string.
 	 * @param verbositySettingKey The setting key for the verbosity of the feature
@@ -143,6 +145,7 @@ export class AccessibleView extends Disposable {
 	private readonly _toolbar: WorkbenchToolBar;
 
 	private _currentProvider: IAccessibleContentProvider | undefined;
+	get currentProvider(): IAccessibleContentProvider | undefined { return this._currentProvider; }
 	private _currentContent: string | undefined;
 
 	private _lastProvider: IAccessibleContentProvider | undefined;
@@ -252,11 +255,11 @@ export class AccessibleView extends Disposable {
 		}
 	}
 
-	showLastProvider(id: AccessibleViewProviderId): void {
+	showLastProvider(id: AccessibleViewProviderId, symbol?: IAccessibleViewSymbol): void {
 		if (!this._lastProvider || this._lastProvider.options.id !== id) {
 			return;
 		}
-		this.show(this._lastProvider);
+		this.show(this._lastProvider, symbol);
 	}
 
 	show(provider?: IAccessibleContentProvider, symbol?: IAccessibleViewSymbol, showAccessibleViewHelp?: boolean, position?: Position): void {
@@ -325,7 +328,7 @@ export class AccessibleView extends Disposable {
 		this._instantiationService.createInstance(AccessibleViewSymbolQuickPick, this).show(this._currentProvider);
 	}
 
-	getSymbols(): IAccessibleViewSymbol[] | undefined {
+	getSymbols(type?: string): IAccessibleViewSymbol[] | undefined {
 		if (!this._currentProvider || !this._currentContent) {
 			return;
 		}
@@ -342,6 +345,9 @@ export class AccessibleView extends Disposable {
 			return;
 		}
 		this._convertTokensToSymbols(markdownTokens, symbols);
+		if (type && symbols.length) {
+			return symbols.filter(s => s.label.startsWith(`(${type})`));
+		}
 		return symbols.length ? symbols : undefined;
 	}
 
@@ -678,8 +684,8 @@ export class AccessibleViewService extends Disposable implements IAccessibleView
 		}
 		this._accessibleView.show(provider, undefined, undefined, position);
 	}
-	showLastProvider(id: AccessibleViewProviderId): void {
-		this._accessibleView?.showLastProvider(id);
+	showLastProvider(id: AccessibleViewProviderId, symbol?: IAccessibleViewSymbol): void {
+		this._accessibleView?.showLastProvider(id, symbol);
 	}
 	next(): void {
 		this._accessibleView?.next();
@@ -689,6 +695,9 @@ export class AccessibleViewService extends Disposable implements IAccessibleView
 	}
 	goToSymbol(): void {
 		this._accessibleView?.goToSymbol();
+	}
+	getSymbols(type: string): IAccessibleViewSymbol[] | undefined {
+		return this._accessibleView?.getSymbols(type);
 	}
 	getOpenAriaHint(verbositySettingKey: AccessibilityVerbositySettingId): string | null {
 		if (!this._configurationService.getValue(verbositySettingKey)) {
@@ -715,6 +724,9 @@ export class AccessibleViewService extends Disposable implements IAccessibleView
 	getLastPosition(): Position | undefined {
 		const lastLine = this._accessibleView?.editorWidget.getModel()?.getLineCount();
 		return lastLine !== undefined && lastLine > 0 ? new Position(lastLine, 1) : undefined;
+	}
+	getCurrentProvider(): AccessibleViewProviderId | undefined {
+		return this._accessibleView?.currentProvider?.id;
 	}
 	setPosition(position: Position, reveal?: boolean): void {
 		const editorWidget = this._accessibleView?.editorWidget;

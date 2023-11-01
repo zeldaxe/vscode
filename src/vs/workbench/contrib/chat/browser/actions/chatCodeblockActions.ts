@@ -25,6 +25,8 @@ import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { TerminalLocation } from 'vs/platform/terminal/common/terminal';
 import { IUntitledTextResourceEditorInput } from 'vs/workbench/common/editor';
+import { AccessibleViewProviderId, accessibleViewCurrentProviderId, accessibleViewIsShown } from 'vs/workbench/contrib/accessibility/browser/accessibilityConfiguration';
+import { IAccessibleViewService } from 'vs/workbench/contrib/accessibility/browser/accessibleView';
 import { CHAT_CATEGORY } from 'vs/workbench/contrib/chat/browser/actions/chatActions';
 import { IChatWidgetService } from 'vs/workbench/contrib/chat/browser/chat';
 import { ICodeBlockActionContext } from 'vs/workbench/contrib/chat/browser/codeBlockPart';
@@ -499,12 +501,15 @@ export function registerChatCodeBlockActions() {
 	});
 
 	function navigateCodeBlocks(accessor: ServicesAccessor, reverse?: boolean): void {
+		const accessibleViewService = accessor.get(IAccessibleViewService);
 		const codeEditorService = accessor.get(ICodeEditorService);
 		const chatWidgetService = accessor.get(IChatWidgetService);
 		const widget = chatWidgetService.lastFocusedWidget;
 		if (!widget) {
 			return;
 		}
+
+		const accessibleViewWasFocused = accessibleViewService.getCurrentProvider() === AccessibleViewProviderId.Chat;
 
 		const editor = codeEditorService.getFocusedCodeEditor();
 		const editorUri = editor?.getModel()?.uri;
@@ -524,9 +529,18 @@ export function registerChatCodeBlockActions() {
 		const focusIdx = curCodeBlockInfo ?
 			(curCodeBlockInfo.codeBlockIndex + (reverse ? -1 : 1) + responseCodeblocks.length) % responseCodeblocks.length :
 			reverse ? responseCodeblocks.length - 1 : 0;
-
-		responseCodeblocks[focusIdx]?.focus();
+		if (accessibleViewWasFocused) {
+			const codeBlocks = accessibleViewService.getSymbols('code');
+			const currentPosition = accessibleViewService.getPosition(AccessibleViewProviderId.Chat)?.lineNumber;
+			if (currentPosition) {
+				const symbol = codeBlocks?.find(c => c.lineNumber && (reverse ? c.lineNumber > currentPosition : c.lineNumber < currentPosition));
+				accessibleViewService.showLastProvider(AccessibleViewProviderId.Chat, symbol);
+			}
+		} else {
+			responseCodeblocks[focusIdx]?.focus();
+		}
 	}
+
 
 	registerAction2(class NextCodeBlockAction extends Action2 {
 		constructor() {
@@ -540,7 +554,7 @@ export function registerChatCodeBlockActions() {
 					primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.PageDown,
 					mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.PageDown, },
 					weight: KeybindingWeight.WorkbenchContrib,
-					when: CONTEXT_IN_CHAT_SESSION,
+					when: ContextKeyExpr.or(CONTEXT_IN_CHAT_SESSION, ContextKeyExpr.and(accessibleViewIsShown, accessibleViewCurrentProviderId.isEqualTo(AccessibleViewProviderId.Chat))),
 				},
 				precondition: CONTEXT_PROVIDER_EXISTS,
 				f1: true,
@@ -565,7 +579,7 @@ export function registerChatCodeBlockActions() {
 					primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.PageUp,
 					mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.PageUp, },
 					weight: KeybindingWeight.WorkbenchContrib,
-					when: CONTEXT_IN_CHAT_SESSION,
+					when: ContextKeyExpr.or(CONTEXT_IN_CHAT_SESSION, ContextKeyExpr.and(accessibleViewIsShown, accessibleViewCurrentProviderId.isEqualTo(AccessibleViewProviderId.Chat))),
 				},
 				precondition: CONTEXT_PROVIDER_EXISTS,
 				f1: true,

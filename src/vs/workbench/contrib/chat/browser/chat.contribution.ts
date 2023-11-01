@@ -208,7 +208,7 @@ class ChatAccessibleViewContribution extends Disposable {
 						alertFocusChange(responseIndex, length, 'previous');
 						renderAccessibleView(accessibleViewService, widgetService, codeEditorService);
 					},
-					options: { type: AccessibleViewType.View }
+					options: { type: AccessibleViewType.View, id: AccessibleViewProviderId.Chat }
 				});
 				return true;
 			}
