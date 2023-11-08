@@ -3,8 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { Emitter } from 'vs/base/common/event';
 import { DisposableStore } from 'vs/base/common/lifecycle';
+import { isWindows } from 'vs/base/common/platform';
 import { IModelService } from 'vs/editor/common/services/model';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
@@ -24,7 +26,7 @@ export class TerminalAccessibleBufferProvider extends DisposableStore implements
 	readonly onDidRequestClearLastProvider = this._onDidRequestClearProvider.event;
 	private _focusedInstance: ITerminalInstance | undefined;
 	constructor(
-		private readonly _instance: Pick<ITerminalInstance, 'onDidRunText' | 'focus' | 'shellType' | 'capabilities' | 'onDidRequestFocus' | 'resource' | 'onDisposed'>,
+		private readonly _instance: Pick<ITerminalInstance, 'xterm' | 'onDidRunText' | 'focus' | 'shellType' | 'capabilities' | 'onDidRequestFocus' | 'resource' | 'onDisposed'>,
 		private _bufferTracker: BufferContentTracker,
 		customHelp: () => string,
 		@IModelService _modelService: IModelService,
@@ -50,8 +52,13 @@ export class TerminalAccessibleBufferProvider extends DisposableStore implements
 		}));
 	}
 
-	onClose() {
+	onClose(e: IKeyboardEvent) {
 		this._instance.focus();
+		setTimeout(() => {
+			if (isWindows) {
+				this._instance.xterm?._writeText(e.browserEvent.key);
+			}
+		}, 50);
 	}
 
 	provideContent(): string {

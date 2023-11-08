@@ -57,7 +57,7 @@ export interface IAccessibleContentProvider {
 	 */
 	actions?: IAction[];
 	provideContent(): string;
-	onClose(): void;
+	onClose(e: IKeyboardEvent): void;
 	onKeyDown?(e: IKeyboardEvent): void;
 	previous?(): void;
 	next?(): void;
@@ -501,7 +501,7 @@ export class AccessibleView extends Disposable {
 		this._updateToolbar(provider.actions, provider.options.type);
 
 		const hide = (e: KeyboardEvent | IKeyboardEvent): void => {
-			provider.onClose();
+			provider.onClose(e as IKeyboardEvent);
 			e.stopPropagation();
 			this._contextViewService.hideContextView();
 			this._updateContextKeys(provider, false);
