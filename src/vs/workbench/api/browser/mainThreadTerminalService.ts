@@ -298,9 +298,9 @@ export class MainThreadTerminalService implements MainThreadTerminalServiceShape
 				let outputMatch;
 				if (outputMatcher) {
 					outputMatch = getOutputMatchForLines(lines, outputMatcher);
-				}
-				if (!outputMatch) {
-					return;
+					if (!outputMatch) {
+						return;
+					}
 				}
 				const matchResult = { commandLineMatch, outputMatch, commandLine: terminalCommand.command };
 
