@@ -95,7 +95,7 @@ const quickFixExtensionPoint = ExtensionsRegistry.registerExtensionPoint<ITermin
 		items: {
 			type: 'object',
 			additionalProperties: false,
-			required: ['id', 'commandLineMatcher', 'outputMatcher', 'commandExitResult'],
+			required: ['id', 'commandLineMatcher', 'commandExitResult'],
 			defaultSnippets: [{
 				body: {
 					id: '$1',
