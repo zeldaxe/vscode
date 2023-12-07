@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { app, BrowserWindow, clipboard, Display, Menu, MessageBoxOptions, MessageBoxReturnValue, OpenDevToolsOptions, OpenDialogOptions, OpenDialogReturnValue, powerMonitor, SaveDialogOptions, SaveDialogReturnValue, screen, shell } from 'electron';
 import { arch, cpus, freemem, loadavg, platform, release, totalmem, type } from 'os';
 import { promisify } from 'util';
 import { memoize } from 'vs/base/common/decorators';
 import { Emitter, Event } from 'vs/base/common/event';
 import { Disposable } from 'vs/base/common/lifecycle';
-import { Schemas } from 'vs/base/common/network';
-import { dirname, join, resolve } from 'vs/base/common/path';
+import { matchesScheme, Schemas } from 'vs/base/common/network';
+import { dirname, isAbsolute, join, resolve } from 'vs/base/common/path';
 import { isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
 import { AddFirstParameterToFunctions } from 'vs/base/common/types';
 import { URI } from 'vs/base/common/uri';
@@ -42,6 +42,7 @@ import { WindowProfiler } from 'vs/platform/profiling/electron-main/windowProfil
 import { IV8Profile } from 'vs/platform/profiling/common/profiling';
 import { IAuxiliaryWindowsMainService, isAuxiliaryWindow } from 'vs/platform/auxiliaryWindow/electron-main/auxiliaryWindows';
 import { IAuxiliaryWindow } from 'vs/platform/auxiliaryWindow/electron-main/auxiliaryWindow';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 export interface INativeHostMainService extends AddFirstParameterToFunctions<ICommonNativeHostService, Promise<unknown> /* only methods, not events */, number | undefined /* window ID */> { }
 
@@ -61,7 +62,8 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 		@IProductService private readonly productService: IProductService,
 		@IThemeMainService private readonly themeMainService: IThemeMainService,
 		@IWorkspacesManagementMainService private readonly workspacesManagementMainService: IWorkspacesManagementMainService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService
+		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IConfigurationService private readonly configurationService: IConfigurationService
 	) {
 		super();
 	}
@@ -476,10 +478,31 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 
 	async openExternal(windowId: number | undefined, url: string): Promise<boolean> {
 		this.environmentMainService.unsetSnapExportedVariables();
-		shell.openExternal(url);
+		this.doOpenExternal(url);
 		this.environmentMainService.restoreSnapExportedVariables();
 
 		return true;
+	}
+
+	private doOpenExternal(url: string): void {
+		if (matchesScheme(url, Schemas.http) || matchesScheme(url, Schemas.https)) {
+			const browserPath = this.configurationService.getValue<string | undefined>('application.browserPath');
+			if (browserPath && isAbsolute(browserPath)) {
+				this.logService.info(`[open-external] spawning '${browserPath} ${url}'`);
+
+				spawn(browserPath, [url], {
+					shell: false,
+					detached: true,
+					env: {},
+					stdio: 'ignore',
+
+				});
+
+				return;
+			}
+		}
+
+		shell.openExternal(url);
 	}
 
 	moveItemToTrash(windowId: number | undefined, fullPath: string): Promise<void> {

@@ -140,6 +140,12 @@ import { applicationConfigurationNodeBase, securityConfigurationNodeBase } from 
 				'included': !isWindows,
 				'scope': ConfigurationScope.APPLICATION,
 				'markdownDescription': localize('application.shellEnvironmentResolutionTimeout', "Controls the timeout in seconds before giving up resolving the shell environment when the application is not already launched from a terminal. See our [documentation](https://go.microsoft.com/fwlink/?linkid=2149667) for more information.")
+			},
+			'application.browserPath': {
+				'type': 'string',
+				'scope': ConfigurationScope.APPLICATION,
+				'description': localize('application.browserPath', "Path and filename of the browser executable to use for opening links. The link to open will be added as last argument."),
+				ignoreSync: true
 			}
 		}
 	});
