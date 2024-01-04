@@ -107,6 +107,9 @@ export const COPY_EDITOR_GROUP_INTO_NEW_WINDOW_COMMAND_ID = 'workbench.action.co
 
 export const NEW_EMPTY_EDITOR_WINDOW_COMMAND_ID = 'workbench.action.newEmptyEditorWindow';
 
+export const APPLY_EDITOR_WORKING_SET_COMMAND_ID = 'workbench.action.applyEditorWorkingSet';
+export const SAVE_EDITOR_WORKING_SET_COMMAND_ID = 'workbench.action.saveEditorWorkingSet';
+
 export const API_OPEN_EDITOR_COMMAND_ID = '_workbench.open';
 export const API_OPEN_DIFF_EDITOR_COMMAND_ID = '_workbench.diff';
 export const API_OPEN_WITH_EDITOR_COMMAND_ID = '_workbench.openWith';

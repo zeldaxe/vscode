@@ -489,6 +489,11 @@ export interface IAuxiliaryEditorPartCreateEvent {
 	readonly disposables: DisposableStore;
 }
 
+export interface IEditorWorkingSet {
+	readonly id: string;
+	readonly name: string;
+}
+
 /**
  * The main service to interact with editor groups across all opened editor parts.
  */
@@ -531,6 +536,29 @@ export interface IEditorGroupsService extends IEditorGroupsContainer {
 	 * in there at the optional position and size on screen.
 	 */
 	createAuxiliaryEditorPart(options?: { bounds?: Partial<IRectangle> }): Promise<IAuxiliaryEditorPart>;
+
+	/**
+	 * Save a new editor working set from the currently opened
+	 * editors and group layout.
+	 */
+	saveWorkingSet(name: string): IEditorWorkingSet;
+
+	/**
+	 * Returns all known editor working sets.
+	 */
+	getWorkingSets(): IEditorWorkingSet[];
+
+	/**
+	 * Closes all editors and groups to apply the working set.
+	 *
+	 * @returns `true` when the working set as applied.
+	 */
+	applyWorkingSet(workingSet: IEditorWorkingSet): Promise<boolean>;
+
+	/**
+	 * Deletes a working set.
+	 */
+	deleteWorkingSet(workingSet: IEditorWorkingSet): void;
 }
 
 export const enum OpenEditorContext {

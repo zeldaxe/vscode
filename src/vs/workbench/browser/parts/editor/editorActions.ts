@@ -13,13 +13,13 @@ import { IWorkbenchLayoutService, Parts } from 'vs/workbench/services/layout/bro
 import { GoFilter, IHistoryService } from 'vs/workbench/services/history/common/history';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { CLOSE_EDITOR_COMMAND_ID, MOVE_ACTIVE_EDITOR_COMMAND_ID, ActiveEditorMoveCopyArguments, SPLIT_EDITOR_LEFT, SPLIT_EDITOR_RIGHT, SPLIT_EDITOR_UP, SPLIT_EDITOR_DOWN, splitEditor, LAYOUT_EDITOR_GROUPS_COMMAND_ID, UNPIN_EDITOR_COMMAND_ID, COPY_ACTIVE_EDITOR_COMMAND_ID, SPLIT_EDITOR, resolveCommandsContext, getCommandsContext, TOGGLE_MAXIMIZE_EDITOR_GROUP, MOVE_EDITOR_INTO_NEW_WINDOW_COMMAND_ID, COPY_EDITOR_INTO_NEW_WINDOW_COMMAND_ID, MOVE_EDITOR_GROUP_INTO_NEW_WINDOW_COMMAND_ID, COPY_EDITOR_GROUP_INTO_NEW_WINDOW_COMMAND_ID, NEW_EMPTY_EDITOR_WINDOW_COMMAND_ID as NEW_EMPTY_EDITOR_WINDOW_COMMAND_ID } from 'vs/workbench/browser/parts/editor/editorCommands';
-import { IEditorGroupsService, IEditorGroup, GroupsArrangement, GroupLocation, GroupDirection, preferredSideBySideGroupDirection, IFindGroupScope, GroupOrientation, EditorGroupLayout, GroupsOrder, MergeGroupMode } from 'vs/workbench/services/editor/common/editorGroupsService';
+import { CLOSE_EDITOR_COMMAND_ID, MOVE_ACTIVE_EDITOR_COMMAND_ID, ActiveEditorMoveCopyArguments, SPLIT_EDITOR_LEFT, SPLIT_EDITOR_RIGHT, SPLIT_EDITOR_UP, SPLIT_EDITOR_DOWN, splitEditor, LAYOUT_EDITOR_GROUPS_COMMAND_ID, UNPIN_EDITOR_COMMAND_ID, COPY_ACTIVE_EDITOR_COMMAND_ID, SPLIT_EDITOR, resolveCommandsContext, getCommandsContext, TOGGLE_MAXIMIZE_EDITOR_GROUP, MOVE_EDITOR_INTO_NEW_WINDOW_COMMAND_ID, COPY_EDITOR_INTO_NEW_WINDOW_COMMAND_ID, MOVE_EDITOR_GROUP_INTO_NEW_WINDOW_COMMAND_ID, COPY_EDITOR_GROUP_INTO_NEW_WINDOW_COMMAND_ID, NEW_EMPTY_EDITOR_WINDOW_COMMAND_ID, APPLY_EDITOR_WORKING_SET_COMMAND_ID, SAVE_EDITOR_WORKING_SET_COMMAND_ID } from 'vs/workbench/browser/parts/editor/editorCommands';
+import { IEditorGroupsService, IEditorGroup, GroupsArrangement, GroupLocation, GroupDirection, preferredSideBySideGroupDirection, IFindGroupScope, GroupOrientation, EditorGroupLayout, GroupsOrder, MergeGroupMode, IEditorWorkingSet } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 import { IFileDialogService, ConfirmResult, IDialogService } from 'vs/platform/dialogs/common/dialogs';
-import { ItemActivation, IQuickInputService } from 'vs/platform/quickinput/common/quickInput';
+import { ItemActivation, IQuickInputService, IQuickPickItem } from 'vs/platform/quickinput/common/quickInput';
 import { AllEditorsByMostRecentlyUsedQuickAccess, ActiveGroupEditorsByMostRecentlyUsedQuickAccess, AllEditorsByAppearanceQuickAccess } from 'vs/workbench/browser/parts/editor/editorQuickAccess';
 import { Codicon } from 'vs/base/common/codicons';
 import { ThemeIcon } from 'vs/base/common/themables';
@@ -2658,5 +2658,142 @@ export class NewEmptyEditorWindowAction extends Action2 {
 
 		const auxiliaryEditorPart = await editorGroupService.createAuxiliaryEditorPart();
 		auxiliaryEditorPart.activeGroup.focus();
+	}
+}
+
+export class SaveEditorWorkingSetAction extends Action2 {
+
+	constructor() {
+		super({
+			id: SAVE_EDITOR_WORKING_SET_COMMAND_ID,
+			title: {
+				value: localize('saveEditorWorkingSet', "Save Editor Working Set..."),
+				mnemonicTitle: localize({ key: 'miSaveEditorWorkingSet', comment: ['&& denotes a mnemonic'] }, "&&Save Editor Working Set..."),
+				original: 'Save Editor Working Set...'
+			},
+			f1: true,
+			category: Categories.View
+		});
+	}
+
+	override async run(accessor: ServicesAccessor): Promise<void> {
+		const editorGroupService = accessor.get(IEditorGroupsService);
+		const quickInputService = accessor.get(IQuickInputService);
+
+		const inputBox = quickInputService.createInputBox();
+		inputBox.title = localize('saveEditorWorkingSetTitle', "Save Editor Working Set");
+		inputBox.ignoreFocusOut = true;
+		inputBox.placeholder = localize('saveEditorWorkingSetPlaceholder', "Enter the name for the editor working set");
+
+		inputBox.onDidAccept(async () => {
+			const name = inputBox.value;
+			if (name) {
+				editorGroupService.saveWorkingSet(name);
+			}
+
+			inputBox.dispose();
+		});
+
+		inputBox.onDidHide(() => inputBox.dispose());
+		inputBox.show();
+	}
+}
+
+export class ApplyEditorWorkingSetAction extends Action2 {
+
+	constructor() {
+		super({
+			id: APPLY_EDITOR_WORKING_SET_COMMAND_ID,
+			title: {
+				value: localize('applyEditorWorkingSet', "Apply Editor Working Set..."),
+				mnemonicTitle: localize({ key: 'miApplyEditorWorkingSet', comment: ['&& denotes a mnemonic'] }, "&&Apply Editor Working Set..."),
+				original: 'Apply Editor Working Set...'
+			},
+			f1: true,
+			category: Categories.View
+		});
+	}
+
+	override async run(accessor: ServicesAccessor): Promise<void> {
+		const editorGroupService = accessor.get(IEditorGroupsService);
+		const quickInputService = accessor.get(IQuickInputService);
+
+		const workingSets = editorGroupService.getWorkingSets();
+
+		const picker = quickInputService.createQuickPick<IQuickPickItem & IEditorWorkingSet>();
+		picker.items = workingSets.map(workingSet => {
+			return {
+				...workingSet,
+				label: workingSet.name
+			};
+		});
+
+		if (picker.items.length === 0) {
+			picker.description = localize('applyEditorWorkingSet.description', "Save an editor working set first to apply it.");
+		}
+
+		picker.placeholder = localize('applyEditorWorkingSet.placeholder', 'Select the editor working set to apply');
+
+		picker.onDidAccept(() => {
+			const workingSet = firstOrDefault(picker.selectedItems);
+			if (workingSet) {
+				editorGroupService.applyWorkingSet(workingSet);
+			}
+
+			picker.dispose();
+		});
+
+		picker.onDidHide(() => picker.dispose());
+		picker.show();
+	}
+}
+
+export class DeleteEditorWorkingSetAction extends Action2 {
+
+	constructor() {
+		super({
+			id: 'workbench.action.deleteEditorWorkingSet',
+			title: {
+				value: localize('deleteEditorWorkingSet', "Delete Editor Working Set..."),
+				original: 'Delete Editor Working Set...'
+			},
+			f1: true,
+			category: Categories.View
+		});
+	}
+
+	override async run(accessor: ServicesAccessor): Promise<void> {
+		const editorGroupService = accessor.get(IEditorGroupsService);
+		const quickInputService = accessor.get(IQuickInputService);
+
+		const workingSets = editorGroupService.getWorkingSets();
+
+		const picker = quickInputService.createQuickPick<IQuickPickItem & IEditorWorkingSet>();
+		picker.items = workingSets.map(workingSet => {
+			return {
+				...workingSet,
+				label: workingSet.name
+			};
+		});
+		picker.canSelectMany = true;
+		picker.ok = false;
+		picker.customButton = true;
+		picker.customLabel = localize('delete', "Delete");
+		picker.placeholder = localize('selectWorkingSets', "Select editor working sets to delete");
+
+		if (picker.items.length === 0) {
+			picker.description = localize('deleteEditorWorkingSet.description', "There are no saved editor working sets.");
+		}
+
+		picker.onDidCustom(() => {
+			for (const workingSet of picker.selectedItems) {
+				editorGroupService.deleteWorkingSet(workingSet);
+			}
+
+			picker.dispose();
+		});
+
+		picker.onDidHide(() => picker.dispose());
+		picker.show();
 	}
 }
