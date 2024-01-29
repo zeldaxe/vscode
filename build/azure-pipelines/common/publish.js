@@ -361,7 +361,7 @@ async function unzip(packagePath, outputPath) {
     });
 }
 // Contains all of the logic for mapping details to our actual product names in CosmosDB
-function getPlatform(product, os, arch, type) {
+function getPlatform(product, os, arch, type, isFallback) {
     switch (os) {
         case 'win32':
             switch (product) {
@@ -412,7 +412,7 @@ function getPlatform(product, os, arch, type) {
                         case 'client':
                             return `linux-${arch}`;
                         case 'server':
-                            return `server-linux-${arch}`;
+                            return isFallback ? `server-linux-${arch}-fallback` : `server-linux-${arch}`;
                         case 'web':
                             return arch === 'standalone' ? 'web-standalone' : `server-linux-${arch}-web`;
                         default:
@@ -467,7 +467,7 @@ function getRealType(type) {
 }
 async function processArtifact(artifact, artifactFilePath) {
     const log = (...args) => console.log(`[${artifact.name}]`, ...args);
-    const match = /^vscode_(?<product>[^_]+)_(?<os>[^_]+)_(?<arch>[^_]+)_(?<unprocessedType>[^_]+)$/.exec(artifact.name);
+    const match = /^vscode_(?<product>[^_]+)_(?<os>[^_]+)_(?<arch>[^_]+)(?:_fallback)?_(?<unprocessedType>[^_]+)$/.exec(artifact.name);
     if (!match) {
         throw new Error(`Invalid artifact name: ${artifact.name}`);
     }
@@ -475,7 +475,8 @@ async function processArtifact(artifact, artifactFilePath) {
     const quality = e('VSCODE_QUALITY');
     const commit = e('BUILD_SOURCEVERSION');
     const { product, os, arch, unprocessedType } = match.groups;
-    const platform = getPlatform(product, os, arch, unprocessedType);
+    const isFallback = artifact.name.includes('_fallback');
+    const platform = getPlatform(product, os, arch, unprocessedType, isFallback);
     const type = getRealType(unprocessedType);
     const size = fs.statSync(artifactFilePath).size;
     const stream = fs.createReadStream(artifactFilePath);

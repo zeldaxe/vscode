@@ -26,7 +26,15 @@ function mixin(mixinPath) {
 }
 function main() {
     log(`Mixing in distro npm dependencies...`);
-    const mixinPaths = dirs.filter(d => /^.build\/distro\/npm/.test(d));
+    let mixinPaths = [];
+    const args = process.argv.slice(2);
+    const separatorIndex = args.indexOf('--');
+    if (separatorIndex !== -1) {
+        mixinPaths = args.slice(separatorIndex + 1);
+    }
+    if (mixinPaths.length === 0) {
+        mixinPaths = dirs.filter(d => /^.build\/distro\/npm/.test(d));
+    }
     for (const mixinPath of mixinPaths) {
         mixin(mixinPath);
     }
