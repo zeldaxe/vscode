@@ -77,14 +77,6 @@ export class RunAutomaticTasks extends Disposable implements IWorkbenchContribut
 			this._logService.trace(`RunAutomaticTasks: updated taskNames=${JSON.stringify(autoTasks.taskNames)}`);
 		}
 
-		if (autoTasks.taskNames.length === 0) {
-			return;
-		}
-
-		if (this._configurationService.getValue(ALLOW_AUTOMATIC_TASKS) === 'off') {
-			return;
-		}
-
 		this._runWithPermission(this._taskService, this._configurationService, autoTasks);
 	}
 
