@@ -51,10 +51,10 @@ export class RunAutomaticTasks extends Disposable implements IWorkbenchContribut
 			await Event.toPromise(Event.once(this._taskService.onDidChangeTaskSystemInfo));
 		}
 		let workspaceTasks = await this._taskService.getWorkspaceTasks(TaskRunSource.FolderOpen);
-		this._logService.info(`RunAutomaticTasks: Found ${workspaceTasks.size} automatic tasks`);
+		this._logService.trace(`RunAutomaticTasks: Found ${workspaceTasks.size} automatic tasks`);
 
 		let autoTasks = this._findAutoTasks(this._taskService, workspaceTasks);
-		this._logService.info(`RunAutomaticTasks: taskNames=${JSON.stringify(autoTasks.taskNames)}`);
+		this._logService.trace(`RunAutomaticTasks: taskNames=${JSON.stringify(autoTasks.taskNames)}`);
 
 		// As seen in some cases with the Remote SSH extension, the tasks configuration is loaded after we have come
 		// to this point. Let's give it some extra time.
@@ -68,13 +68,13 @@ export class RunAutomaticTasks extends Disposable implements IWorkbenchContribut
 				})]);
 
 			if (!updatedWithinTimeout) {
-				this._logService.info(`RunAutomaticTasks: waited some extra time, but no update of tasks configuration`);
+				this._logService.trace(`RunAutomaticTasks: waited some extra time, but no update of tasks configuration`);
 				return;
 			}
 
 			workspaceTasks = await this._taskService.getWorkspaceTasks(TaskRunSource.FolderOpen);
 			autoTasks = this._findAutoTasks(this._taskService, workspaceTasks);
-			this._logService.info(`RunAutomaticTasks: updated taskNames=${JSON.stringify(autoTasks.taskNames)}`);
+			this._logService.trace(`RunAutomaticTasks: updated taskNames=${JSON.stringify(autoTasks.taskNames)}`);
 		}
 
 		if (autoTasks.taskNames.length === 0) {
