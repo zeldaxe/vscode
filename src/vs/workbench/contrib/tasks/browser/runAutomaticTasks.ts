@@ -61,7 +61,7 @@ export class RunAutomaticTasks extends Disposable implements IWorkbenchContribut
 		if (autoTasks.taskNames.length === 0) {
 			const updatedWithinTimeout = await Promise.race([
 				new Promise<boolean>((resolve) => {
-					Event.toPromise(Event.once(this._taskService.onTaskSettingsChanged)).then(() => resolve(true));
+					Event.toPromise(Event.once(this._taskService.onDidChangeTaskConfig)).then(() => resolve(true));
 				}),
 				new Promise<boolean>((resolve) => {
 					const timer = setTimeout(() => { clearTimeout(timer); resolve(false); }, 10000);
@@ -77,7 +77,7 @@ export class RunAutomaticTasks extends Disposable implements IWorkbenchContribut
 			this._logService.trace(`RunAutomaticTasks: updated taskNames=${JSON.stringify(autoTasks.taskNames)}`);
 		}
 
-		this._runWithPermission(this._taskService, this._configurationService, autoTasks);
+		this._runWithPermission(this._taskService, this._configurationService, autoTasks.tasks, autoTasks.taskNames);
 	}
 
 	private _runTasks(taskService: ITaskService, tasks: Array<Task | Promise<Task | undefined>>) {
@@ -149,18 +149,14 @@ export class RunAutomaticTasks extends Disposable implements IWorkbenchContribut
 		return { tasks, taskNames, locations };
 	}
 
-	private async _runWithPermission(taskService: ITaskService, configurationService: IConfigurationService, autoTasks: {
-		tasks: (Task | Promise<Task | undefined>)[];
-		taskNames: string[];
-		locations: Map<string, URI>;
-	}) {
-		if (autoTasks.taskNames.length === 0) {
+	private async _runWithPermission(taskService: ITaskService, configurationService: IConfigurationService, tasks: (Task | Promise<Task | undefined>)[], taskNames: string[]) {
+		if (taskNames.length === 0) {
 			return;
 		}
 		if (configurationService.getValue(ALLOW_AUTOMATIC_TASKS) === 'off') {
 			return;
 		}
-		this._runTasks(taskService, autoTasks.tasks);
+		this._runTasks(taskService, tasks);
 	}
 }
 

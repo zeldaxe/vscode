@@ -231,8 +231,8 @@ export abstract class AbstractTaskService extends Disposable implements ITaskSer
 	public onDidChangeTaskSystemInfo: Event<void> = this._onDidChangeTaskSystemInfo.event;
 	private _onDidReconnectToTasks: Emitter<void> = new Emitter();
 	public onDidReconnectToTasks: Event<void> = this._onDidReconnectToTasks.event;
-	private _onTaskSettingsChanged: Emitter<void> = new Emitter();
-	public onTaskSettingsChanged: Event<void> = this._onTaskSettingsChanged.event;
+	private _onDidChangeTaskConfig: Emitter<void> = new Emitter();
+	public onDidChangeTaskConfig: Event<void> = this._onDidChangeTaskConfig.event;
 	public get isReconnected(): boolean { return this._tasksReconnected; }
 
 	constructor(
@@ -309,7 +309,7 @@ export abstract class AbstractTaskService extends Disposable implements ITaskSer
 
 			this._setTaskLRUCacheLimit();
 			await this._updateWorkspaceTasks(TaskRunSource.ConfigurationChange);
-			this._onTaskSettingsChanged.fire();
+			this._onDidChangeTaskConfig.fire();
 		}));
 		this._taskRunningState = TASK_RUNNING_STATE.bindTo(_contextKeyService);
 		this._onDidStateChange = this._register(new Emitter());

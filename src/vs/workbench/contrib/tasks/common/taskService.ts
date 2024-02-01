@@ -94,7 +94,7 @@ export interface ITaskService {
 
 	registerTaskSystem(scheme: string, taskSystemInfo: ITaskSystemInfo): void;
 	onDidChangeTaskSystemInfo: Event<void>;
-	onTaskSettingsChanged: Event<void>;
+	onDidChangeTaskConfig: Event<void>;
 	readonly hasTaskSystemInfo: boolean;
 	registerSupportedExecutions(custom?: boolean, shell?: boolean, process?: boolean): void;
 
