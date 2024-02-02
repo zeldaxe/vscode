@@ -295,8 +295,9 @@ steps:
 
     - script: |
         set -e
-        # Delete remote/node_modules to build with fallback toolchain
+        # Delete remote/node_modules to build with legacy toolchain
         rm -rf remote/node_modules
+        rm -rf .build/node
         rm -rf ../vscode-reh-linux-$(VSCODE_ARCH)
         rm -rf ../vscode-server-linux-$(VSCODE_ARCH)
 
@@ -306,7 +307,7 @@ steps:
         export VSCODE_SYSROOT_PREFIX='-glibc-2.17'
         source ./build/azure-pipelines/linux/setup-env.sh --only-remote
 
-        # reinstall oss remote node_modules with fallback toolchain
+        # reinstall oss remote node_modules with legacy toolchain
         for i in {1..5}; do # try 5 times
           yarn --cwd remote --frozen-lockfile --check-files && break
           if [ $i -eq 3 ]; then
@@ -316,7 +317,7 @@ steps:
           echo "Yarn failed $i, trying again..."
         done
 
-        # reinstall distro remote node_modules with fallback toolchain
+        # reinstall distro remote node_modules with legacy toolchain
         for i in {1..5}; do # try 5 times
           yarn --cwd .build/distro/npm/remote --frozen-lockfile --check-files && break
           if [ $i -eq 3 ]; then
@@ -330,7 +331,7 @@ steps:
         node build/azure-pipelines/distro/mixin-npm -- .build/distro/npm/remote
 
         EXPECTED_GLIBC_VERSION="2.17" \
-        EXPECTED_GLIBCXX_VERSION="3.4.24" \
+        EXPECTED_GLIBCXX_VERSION="3.4.19" \
         ./build/azure-pipelines/linux/verify-glibc-requirements.sh
         exit_code=$?
         if [ $exit_code -ne 0 ]; then
@@ -342,13 +343,13 @@ steps:
         ARCHIVE_PATH=".build/linux/server/vscode-server-linux-$(VSCODE_ARCH).tar.gz"
         mkdir -p $(dirname $ARCHIVE_PATH)
         tar --owner=0 --group=0 -czf $ARCHIVE_PATH -C .. vscode-server-linux-$(VSCODE_ARCH)
-        echo "##vso[task.setvariable variable=SERVER_FALLBACK_PATH]$ARCHIVE_PATH"
+        echo "##vso[task.setvariable variable=SERVER_LEGACY_PATH]$ARCHIVE_PATH"
       env:
         npm_config_arch: $(NPM_ARCH)
         VSCODE_ARCH: $(VSCODE_ARCH)
         NPM_REGISTRY: "$(NPM_REGISTRY)"
         GITHUB_TOKEN: "$(github-distro-mixin-password)"
-      displayName: Build server fallback (GCC 7.5.0 glibc 2.17)
+      displayName: Build server legacy (GCC 7.5.0 glibc 2.17)
 
     - ${{ if eq(parameters.VSCODE_RUN_INTEGRATION_TESTS, true) }}:
       - template: product-build-linux-test.yml
@@ -407,10 +408,10 @@ steps:
       condition: and(succeededOrFailed(), ne(variables['SERVER_PATH'], ''))
       displayName: Publish server archive
 
-    - publish: $(SERVER_FALLBACK_PATH)
-      artifact: $(ARTIFACT_PREFIX)vscode_server_linux_$(VSCODE_ARCH)_fallback_archive-unsigned
-      condition: and(succeededOrFailed(), ne(variables['SERVER_FALLBACK_PATH'], ''))
-      displayName: Publish server fallback archive
+    - publish: $(SERVER_LEGACY_PATH)
+      artifact: $(ARTIFACT_PREFIX)vscode_server_linux_$(VSCODE_ARCH)_legacy_archive-unsigned
+      condition: and(succeededOrFailed(), ne(variables['SERVER_LEGACY_PATH'], ''))
+      displayName: Publish server legacy archive
 
     - publish: $(WEB_PATH)
       artifact: $(ARTIFACT_PREFIX)vscode_web_linux_$(VSCODE_ARCH)_archive-unsigned
