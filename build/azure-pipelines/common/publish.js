@@ -412,7 +412,7 @@ function getPlatform(product, os, arch, type, isLegacy) {
                         case 'client':
                             return `linux-${arch}`;
                         case 'server':
-                            return isLegacy ? `server-linux-${arch}-legacy` : `server-linux-${arch}`;
+                            return isLegacy ? `legacy-server-linux-${arch}` : `server-linux-${arch}`;
                         case 'web':
                             return arch === 'standalone' ? 'web-standalone' : `server-linux-${arch}-web`;
                         default:
@@ -467,7 +467,7 @@ function getRealType(type) {
 }
 async function processArtifact(artifact, artifactFilePath) {
     const log = (...args) => console.log(`[${artifact.name}]`, ...args);
-    const match = /^vscode_(?<product>[^_]+)_(?<os>[^_]+)_(?<arch>[^_]+)(?:_legacy)?_(?<unprocessedType>[^_]+)$/.exec(artifact.name);
+    const match = /^vscode(?:_legacy)?_(?<product>[^_]+)_(?<os>[^_]+)_(?<arch>[^_]+)_(?<unprocessedType>[^_]+)$/.exec(artifact.name);
     if (!match) {
         throw new Error(`Invalid artifact name: ${artifact.name}`);
     }
