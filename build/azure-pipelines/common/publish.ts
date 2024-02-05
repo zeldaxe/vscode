@@ -572,7 +572,10 @@ function getPlatform(product: string, os: string, arch: string, type: string, is
 						case 'server':
 							return isLegacy ? `legacy-server-linux-${arch}` : `server-linux-${arch}`;
 						case 'web':
-							return arch === 'standalone' ? 'web-standalone' : `server-linux-${arch}-web`;
+							if (arch === 'standalone') {
+								return 'web-standalone';
+							}
+							return isLegacy ? `legacy-server-linux-${arch}-web` : `server-linux-${arch}-web`;
 						default:
 							throw new Error(`Unrecognized: ${product} ${os} ${arch} ${type}`);
 					}
