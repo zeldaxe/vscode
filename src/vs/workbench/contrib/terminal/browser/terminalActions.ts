@@ -65,7 +65,7 @@ import { isKeyboardEvent, isMouseEvent, isPointerEvent } from 'vs/base/browser/d
 import { editorGroupToColumn } from 'vs/workbench/services/editor/common/editorGroupColumn';
 import { InstanceContext } from 'vs/workbench/contrib/terminal/browser/terminalContextMenu';
 import { TerminalVoiceSession } from 'vs/workbench/contrib/terminal/browser/terminalVoice';
-import { HasSpeechProvider } from 'vs/workbench/contrib/speech/common/speechService';
+import { HasSpeechProvider, SpeechToTextInProgress } from 'vs/workbench/contrib/speech/common/speechService';
 
 export const switchTerminalActionViewItemSeparator = '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';
 export const switchTerminalShowTabsTitle = localize('showTerminalTabs', "Show Tabs");
@@ -1674,6 +1674,41 @@ export function registerTerminalActions() {
 		}
 	});
 }
+
+
+registerActiveInstanceAction({
+	id: TerminalCommandId.StartVoiceChat,
+	title: localize2('workbench.action.terminal.startVoiceChat', "Start Terminal Voice Chat"),
+	precondition: ContextKeyExpr.and(HasSpeechProvider, sharedWhenClause.terminalAvailable, SpeechToTextInProgress.negate()),
+	f1: true,
+	keybinding: {
+		when: TerminalContextKeys.focus,
+		weight: KeybindingWeight.WorkbenchContrib + 200,
+		primary: KeyMod.CtrlCmd | KeyCode.KeyI,
+		secondary: [KeyChord(KeyMod.CtrlCmd | KeyCode.KeyK, KeyCode.KeyI)],
+	},
+	run: (activeInstance, c, accessor) => {
+		const instantiationService = accessor.get(IInstantiationService);
+		TerminalVoiceSession.getInstance(instantiationService).start(true);
+	}
+});
+
+registerActiveInstanceAction({
+	id: TerminalCommandId.StopVoiceChat,
+	title: localize2('workbench.action.terminal.stopVoiceChat', "Stop Terminal Voice Chat"),
+	precondition: ContextKeyExpr.and(HasSpeechProvider, sharedWhenClause.terminalAvailable, SpeechToTextInProgress),
+	f1: true,
+	keybinding: {
+		when: TerminalContextKeys.focus,
+		weight: KeybindingWeight.WorkbenchContrib + 200,
+		primary: KeyMod.CtrlCmd | KeyCode.KeyI,
+		secondary: [KeyChord(KeyMod.CtrlCmd | KeyCode.KeyK, KeyCode.KeyI)],
+	},
+	run: (activeInstance, c, accessor) => {
+		const instantiationService = accessor.get(IInstantiationService);
+		TerminalVoiceSession.getInstance(instantiationService).stop(true);
+	}
+});
 
 interface IRemoteTerminalPick extends IQuickPickItem {
 	term: IRemoteTerminalAttachTarget;

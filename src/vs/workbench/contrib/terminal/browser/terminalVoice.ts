@@ -51,9 +51,11 @@ const symbolMap: { [key: string]: string } = {
 export class TerminalVoiceSession extends Disposable {
 	private _input: string = '';
 	private _ghostText: IDecoration | undefined;
+	private _ghostText2: IDecoration | undefined;
 	private _decoration: IDecoration | undefined;
 	private _marker: IXtermMarker | undefined;
 	private _ghostTextMarker: IXtermMarker | undefined;
+	private _ghostTextMarker2: IXtermMarker | undefined;
 	private static _instance: TerminalVoiceSession | undefined = undefined;
 	private _acceptTranscriptionScheduler: RunOnceScheduler | undefined;
 	static getInstance(instantiationService: IInstantiationService): TerminalVoiceSession {
@@ -77,15 +79,15 @@ export class TerminalVoiceSession extends Disposable {
 		this._disposables = this._register(new DisposableStore());
 	}
 
-	start(): void {
+	start(chat?: boolean): void {
 		this.stop();
 		let voiceTimeout = this.configurationService.getValue<number>(AccessibilityVoiceSettingId.SpeechTimeout);
 		if (!isNumber(voiceTimeout) || voiceTimeout < 0) {
 			voiceTimeout = SpeechTimeoutDefault;
 		}
 		this._acceptTranscriptionScheduler = this._disposables.add(new RunOnceScheduler(() => {
-			this._sendText();
-			this.stop();
+			// this._sendText();
+			this.stop(true);
 		}, voiceTimeout));
 		this._cancellationTokenSource = this._register(new CancellationTokenSource());
 		const session = this._disposables.add(this._speechService.createSpeechToTextSession(this._cancellationTokenSource!.token));
@@ -111,37 +113,62 @@ export class TerminalVoiceSession extends Disposable {
 				}
 				case SpeechToTextStatus.Recognized:
 					this._updateInput(e);
+					if (chat) {
+						this.stop(undefined, true);
+					}
 					if (voiceTimeout > 0) {
 						this._acceptTranscriptionScheduler!.schedule();
 					}
 					break;
 				case SpeechToTextStatus.Stopped:
 					// TODO: play stop audio cue
-					this.stop();
+					this.stop(undefined, chat);
 					break;
 			}
 		}));
 	}
-	stop(send?: boolean): void {
+	stop(send?: boolean, chat?: boolean): void {
 		this._setInactive();
 		if (send) {
 			this._acceptTranscriptionScheduler!.cancel();
 			this._sendText();
 		}
-		this._marker?.dispose();
-		this._ghostTextMarker?.dispose();
-		this._ghostText?.dispose();
-		this._ghostText = undefined;
 		this._decoration?.dispose();
 		this._decoration = undefined;
-		this._cancellationTokenSource?.cancel();
-		this._disposables.clear();
-		this._input = '';
+		if (!chat) {
+			this._marker?.dispose();
+			this._ghostTextMarker?.dispose();
+			this._ghostText?.dispose();
+			this._ghostText2?.dispose();
+			this._ghostText = undefined;
+			this._cancellationTokenSource?.cancel();
+			this._disposables.clear();
+			this._input = '';
+		}
+		if (chat) {
+			this._createDecoration(chat);
+			const demo = `#!/bin/bash\nfor i in {1..10}; do echo -n "$i "; done; echo`;
+			this._renderGhostText(undefined, demo);
+			setTimeout(() => {
+				const demo = `#!/bin/bash\nfor i in {1..10}; do echo -n "$i "; done; echo`;
+				this._ghostTextMarker2?.dispose();
+				this._decoration?.dispose();
+				this._ghostText2?.dispose();
+				this._ghostText?.dispose();
+				this._terminalService.activeInstance?.sendText(demo, false, true);
+				this._terminalService.activeInstance?.xterm?.raw.markers.forEach(marker => {
+					marker.dispose();
+				});
+				alert(localize('terminalVoiceTextInserted', '{0} inserted', demo));
+			}, 2000);
+		}
 	}
 
 	private _sendText(): void {
-		this._terminalService.activeInstance?.sendText(this._input, false);
-		alert(localize('terminalVoiceTextInserted', '{0} inserted', this._input));
+		const demo = `#!/bin/bash\nfor i in {1..10}; do echo -n "$i "; done; echo`;
+		this._renderGhostText(undefined, demo);
+
+
 	}
 
 	private _updateInput(e: ISpeechToTextEvent): void {
@@ -154,7 +181,7 @@ export class TerminalVoiceSession extends Disposable {
 		}
 	}
 
-	private _createDecoration(): void {
+	private _createDecoration(chat?: boolean): void {
 		const activeInstance = this._terminalService.activeInstance;
 		const xterm = activeInstance?.xterm?.raw;
 		if (!xterm) {
@@ -171,8 +198,17 @@ export class TerminalVoiceSession extends Disposable {
 			x: xterm.buffer.active.cursorX ?? 0,
 		});
 		this._decoration?.onRender((e: HTMLElement) => {
-			e.classList.add(...ThemeIcon.asClassNameArray(Codicon.micFilled), 'terminal-voice', 'recording');
-			e.style.transform = onFirstLine ? 'translate(10px, -2px)' : 'translate(-6px, -5px)';
+			if (!chat) {
+				e.classList.add(...ThemeIcon.asClassNameArray(Codicon.micFilled), 'terminal-voice', 'recording');
+				e.style.transform = onFirstLine ? 'translate(10px, -2px)' : 'translate(-6px, -5px)';
+			} else {
+				e.classList.add('rectangle');
+				e.textContent = localize('kbHints', 'Accept (Tab) Accept Word (Cmd+->)');
+				e.style.transform = 'translate(-6px, -5px)';
+				const hexColor = '#544B4B';
+				e.style.backgroundColor = hexColor;
+				e.style.width = '300px';
+			}
 		});
 	}
 
@@ -180,10 +216,11 @@ export class TerminalVoiceSession extends Disposable {
 		this._decoration?.element?.classList.remove('recording');
 	}
 
-	private _renderGhostText(e: ISpeechToTextEvent): void {
+	private _renderGhostText(e?: ISpeechToTextEvent, text?: string): void {
 		this._ghostText?.dispose();
-		const text = e.text;
-		if (!text) {
+		this._ghostText2?.dispose();
+		const textToRender = e?.text || text;
+		if (!textToRender) {
 			return;
 		}
 		const activeInstance = this._terminalService.activeInstance;
@@ -191,21 +228,40 @@ export class TerminalVoiceSession extends Disposable {
 		if (!xterm) {
 			return;
 		}
-		this._ghostTextMarker = activeInstance.registerMarker();
-		if (!this._ghostTextMarker) {
-			return;
-		}
 		const onFirstLine = xterm.buffer.active.cursorY === 0;
-		this._ghostText = xterm.registerDecoration({
-			marker: this._ghostTextMarker,
-			layer: 'top',
-			x: onFirstLine ? xterm.buffer.active.cursorX + 4 : xterm.buffer.active.cursorX + 1 ?? 0,
-		});
-		this._ghostText?.onRender((e: HTMLElement) => {
-			e.classList.add('terminal-voice-progress-text');
-			e.textContent = text;
-			e.style.width = (xterm.cols - xterm.buffer.active.cursorX) / xterm.cols * 100 + '%';
-		});
+		if (text) {
+			this._ghostTextMarker2 = activeInstance.registerMarker();
+			if (!this._ghostTextMarker2) {
+				return;
+			}
+			this._ghostText2 = xterm.registerDecoration({
+				marker: this._ghostTextMarker2,
+				layer: 'top',
+				x: onFirstLine ? xterm.buffer.active.cursorX + 4 : xterm.buffer.active.cursorX + 1 ?? 0,
+			});
+			this._ghostText2?.onRender((e: HTMLElement) => {
+				e.classList.add('terminal-voice-progress-text');
+				e.textContent = text;
+				e.style.width = (xterm.cols - xterm.buffer.active.cursorX) / xterm.cols * 100 + '%';
+				setTimeout(() => this._ghostText2?.dispose(), 2000);
+			});
+		} else {
+			this._ghostTextMarker = activeInstance.registerMarker();
+			if (!this._ghostTextMarker) {
+				return;
+			}
+			this._ghostText = xterm.registerDecoration({
+				marker: this._ghostTextMarker,
+				layer: 'top',
+				x: onFirstLine ? xterm.buffer.active.cursorX + 4 : xterm.buffer.active.cursorX + 1 ?? 0,
+			});
+			this._ghostText?.onRender((e: HTMLElement) => {
+				e.classList.add('terminal-voice-progress-text');
+				e.textContent = textToRender;
+				e.style.width = (xterm.cols - xterm.buffer.active.cursorX) / xterm.cols * 100 + '%';
+			});
+		}
+
 	}
 }
 

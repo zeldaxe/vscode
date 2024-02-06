@@ -45,3 +45,16 @@
 	border: 1px solid var(--vscode-editorGhostText-border);
 	z-index: 1000;
 }
+
+.rectangle {
+	align-items: center;
+	display: flex;
+	height: 20px;
+	margin: 0 auto;
+	padding: 0;
+	width: 200px;
+	transform: translateY(-30px);
+	background-color: rgb(84, 75, 75);
+	color: white;
+	display: flex;
+}
