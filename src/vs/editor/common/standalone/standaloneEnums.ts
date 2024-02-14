@@ -360,7 +360,8 @@ export enum EndOfLineSequence {
  */
 export enum GlyphMarginLane {
 	Left = 1,
-	Right = 2
+	Center = 2,
+	Right = 3
 }
 
 /**
@@ -699,6 +700,10 @@ export enum MouseTargetType {
 	 * Mouse is outside of the editor.
 	 */
 	OUTSIDE_EDITOR = 13
+}
+
+export enum NewSymbolNameTag {
+	AIGenerated = 1
 }
 
 /**

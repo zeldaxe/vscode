@@ -6,8 +6,7 @@
 import { status } from 'vs/base/browser/ui/aria/aria';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { Disposable, DisposableMap, IDisposable } from 'vs/base/common/lifecycle';
-import { AccessibleNotificationEvent, IAccessibleNotificationService } from 'vs/platform/accessibility/common/accessibility';
-import { AudioCue, IAudioCueService } from 'vs/platform/audioCues/browser/audioCueService';
+import { AccessibilitySignal, IAccessibilitySignalService } from 'vs/platform/accessibilitySignal/browser/accessibilitySignalService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IChatAccessibilityService } from 'vs/workbench/contrib/chat/browser/chat';
 import { IChatResponseViewModel } from 'vs/workbench/contrib/chat/common/chatViewModel';
@@ -20,12 +19,12 @@ export class ChatAccessibilityService extends Disposable implements IChatAccessi
 
 	private _requestId: number = 0;
 
-	constructor(@IAudioCueService private readonly _audioCueService: IAudioCueService, @IAccessibleNotificationService private readonly _accessibleNotificationService: IAccessibleNotificationService, @IInstantiationService private readonly _instantiationService: IInstantiationService) {
+	constructor(@IAccessibilitySignalService private readonly _accessibilitySignalService: IAccessibilitySignalService, @IInstantiationService private readonly _instantiationService: IInstantiationService) {
 		super();
 	}
 	acceptRequest(): number {
 		this._requestId++;
-		this._accessibleNotificationService.notify(AccessibleNotificationEvent.ChatRequestSent, undefined, undefined, true);
+		this._accessibilitySignalService.playSignal(AccessibilitySignal.chatRequestSent, { allowManyInParallel: true });
 		this._pendingCueMap.set(this._requestId, this._instantiationService.createInstance(AudioCueScheduler));
 		return this._requestId;
 	}
@@ -33,7 +32,7 @@ export class ChatAccessibilityService extends Disposable implements IChatAccessi
 		this._pendingCueMap.deleteAndDispose(requestId);
 		const isPanelChat = typeof response !== 'string';
 		const responseContent = typeof response === 'string' ? response : response?.response.asString();
-		this._audioCueService.playAudioCue(AudioCue.chatResponseReceived, { allowManyInParallel: true });
+		this._accessibilitySignalService.playSignal(AccessibilitySignal.chatResponseReceived, { allowManyInParallel: true });
 		if (!response) {
 			return;
 		}
@@ -50,10 +49,10 @@ const CHAT_RESPONSE_PENDING_ALLOWANCE_MS = 4000;
 class AudioCueScheduler extends Disposable {
 	private _scheduler: RunOnceScheduler;
 	private _audioCueLoop: IDisposable | undefined;
-	constructor(@IAudioCueService private readonly _audioCueService: IAudioCueService) {
+	constructor(@IAccessibilitySignalService private readonly _accessibilitySignalService: IAccessibilitySignalService) {
 		super();
 		this._scheduler = new RunOnceScheduler(() => {
-			this._audioCueLoop = this._audioCueService.playAudioCueLoop(AudioCue.chatResponsePending, CHAT_RESPONSE_PENDING_AUDIO_CUE_LOOP_MS);
+			this._audioCueLoop = this._accessibilitySignalService.playSignalLoop(AccessibilitySignal.chatResponsePending, CHAT_RESPONSE_PENDING_AUDIO_CUE_LOOP_MS);
 		}, CHAT_RESPONSE_PENDING_ALLOWANCE_MS);
 		this._scheduler.schedule();
 	}

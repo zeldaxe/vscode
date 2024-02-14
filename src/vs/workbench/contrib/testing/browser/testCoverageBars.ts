@@ -20,7 +20,7 @@ import { ITestingCoverageBarThresholds, TestingConfigKeys, TestingDisplayedCover
 import { AbstractFileCoverage, getTotalCoveragePercent } from 'vs/workbench/contrib/testing/common/testCoverage';
 import { ITestCoverageService } from 'vs/workbench/contrib/testing/common/testCoverageService';
 import { ICoveredCount } from 'vs/workbench/contrib/testing/common/testTypes';
-import { IHoverService } from 'vs/workbench/services/hover/browser/hover';
+import { IHoverService } from 'vs/platform/hover/browser/hover';
 
 export interface TestCoverageBarsOptions {
 	/**
@@ -35,7 +35,7 @@ export interface TestCoverageBarsOptions {
 }
 
 /** Type that can be used to render coverage bars */
-export type CoverageBarSource = Pick<AbstractFileCoverage, 'statement' | 'branch' | 'function'>;
+export type CoverageBarSource = Pick<AbstractFileCoverage, 'statement' | 'branch' | 'declaration'>;
 
 export class ManagedTestCoverageBars extends Disposable {
 	private _coverage?: CoverageBarSource;
@@ -139,11 +139,11 @@ export class ManagedTestCoverageBars extends Disposable {
 		const overallStat = calculateDisplayedStat(coverage, getTestingConfiguration(this.configurationService, TestingConfigKeys.CoveragePercent));
 		el.overall.textContent = displayPercent(overallStat, precision);
 		if ('tpcBar' in el) { // compact mode
-			renderBar(el.tpcBar, overallStat, thresholds);
+			renderBar(el.tpcBar, overallStat, false, thresholds);
 		} else {
-			renderBar(el.statement, percent(coverage.statement), thresholds);
-			renderBar(el.function, coverage.function && percent(coverage.function), thresholds);
-			renderBar(el.branch, coverage.branch && percent(coverage.branch), thresholds);
+			renderBar(el.statement, percent(coverage.statement), coverage.statement.total === 0, thresholds);
+			renderBar(el.function, coverage.declaration && percent(coverage.declaration), coverage.declaration?.total === 0, thresholds);
+			renderBar(el.branch, coverage.branch && percent(coverage.branch), coverage.branch?.total === 0, thresholds);
 		}
 	}
 }
@@ -152,27 +152,35 @@ const percent = (cc: ICoveredCount) => clamp(cc.total === 0 ? 1 : cc.covered / c
 const epsilon = 10e-8;
 const barWidth = 16;
 
-const renderBar = (bar: HTMLElement, pct: number | undefined, thresholds: ITestingCoverageBarThresholds) => {
+const renderBar = (bar: HTMLElement, pct: number | undefined, isZero: boolean, thresholds: ITestingCoverageBarThresholds) => {
 	if (pct === undefined) {
 		bar.style.display = 'none';
-	} else {
-		bar.style.display = 'block';
-		bar.style.width = `${barWidth}px`;
-		// this is floored so the bar is only completely filled at 100% and not 99.9%
-		bar.style.setProperty('--test-bar-width', `${Math.floor(pct * 16)}px`);
-
-		let best = colorThresholds[0].color; //  red
-		let distance = pct;
-		for (const { key, color } of colorThresholds) {
-			const t = thresholds[key] / 100;
-			if (t && pct >= t && pct - t < distance) {
-				best = color;
-				distance = pct - t;
-			}
-		}
-
-		bar.style.color = best;
+		return;
 	}
+
+	bar.style.display = 'block';
+	bar.style.width = `${barWidth}px`;
+	// this is floored so the bar is only completely filled at 100% and not 99.9%
+	bar.style.setProperty('--test-bar-width', `${Math.floor(pct * 16)}px`);
+
+	if (isZero) {
+		bar.style.color = 'currentColor';
+		bar.style.opacity = '0.5';
+		return;
+	}
+
+	let best = colorThresholds[0].color; //  red
+	let distance = pct;
+	for (const { key, color } of colorThresholds) {
+		const t = thresholds[key] / 100;
+		if (t && pct >= t && pct - t < distance) {
+			best = color;
+			distance = pct - t;
+		}
+	}
+
+	bar.style.color = best;
+	bar.style.opacity = '1';
 };
 
 const colorThresholds = [
@@ -188,11 +196,11 @@ const calculateDisplayedStat = (coverage: CoverageBarSource, method: TestingDisp
 		case TestingDisplayedCoveragePercent.Minimum: {
 			let value = percent(coverage.statement);
 			if (coverage.branch) { value = Math.min(value, percent(coverage.branch)); }
-			if (coverage.function) { value = Math.min(value, percent(coverage.function)); }
+			if (coverage.declaration) { value = Math.min(value, percent(coverage.declaration)); }
 			return value;
 		}
 		case TestingDisplayedCoveragePercent.TotalCoverage:
-			return getTotalCoveragePercent(coverage.statement, coverage.branch, coverage.function);
+			return getTotalCoveragePercent(coverage.statement, coverage.branch, coverage.declaration);
 		default:
 			assertNever(method);
 	}
@@ -211,7 +219,7 @@ const displayPercent = (value: number, precision = 2) => {
 };
 
 const stmtCoverageText = (coverage: CoverageBarSource) => localize('statementCoverage', '{0}/{1} statements covered ({2})', coverage.statement.covered, coverage.statement.total, displayPercent(percent(coverage.statement)));
-const fnCoverageText = (coverage: CoverageBarSource) => coverage.function && localize('functionCoverage', '{0}/{1} functions covered ({2})', coverage.function.covered, coverage.function.total, displayPercent(percent(coverage.function)));
+const fnCoverageText = (coverage: CoverageBarSource) => coverage.declaration && localize('functionCoverage', '{0}/{1} functions covered ({2})', coverage.declaration.covered, coverage.declaration.total, displayPercent(percent(coverage.declaration)));
 const branchCoverageText = (coverage: CoverageBarSource) => coverage.branch && localize('branchCoverage', '{0}/{1} branches covered ({2})', coverage.branch.covered, coverage.branch.total, displayPercent(percent(coverage.branch)));
 
 const getOverallHoverText = (coverage: CoverageBarSource) => new MarkdownString([

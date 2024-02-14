@@ -104,6 +104,8 @@ export class NativeIssueService implements IWorkbenchIssueService {
 					hasIssueDataProviders: this._providers.has(extension.identifier.id.toLowerCase()),
 					displayName: manifest.displayName,
 					id: extension.identifier.id,
+					data: dataOverrides.data,
+					uri: dataOverrides.uri,
 					isTheme,
 					isBuiltin,
 					extensionData: 'Extensions data loading',

@@ -14,7 +14,7 @@ import { isNumber, isObject, isString, isUndefined } from 'vs/base/common/types'
 import { URI, UriComponents } from 'vs/base/common/uri';
 import { isDiffEditor } from 'vs/editor/browser/editorBrowser';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
-import { localize } from 'vs/nls';
+import { localize, localize2 } from 'vs/nls';
 import { Categories } from 'vs/platform/action/common/actionCommonCategories';
 import { Action2, MenuId, MenuRegistry, registerAction2 } from 'vs/platform/actions/common/actions';
 import { CommandsRegistry, ICommandHandler, ICommandService } from 'vs/platform/commands/common/commands';
@@ -388,7 +388,7 @@ function registerDiffEditorCommands(): void {
 	MenuRegistry.appendMenuItem(MenuId.CommandPalette, {
 		command: {
 			id: GOTO_NEXT_CHANGE,
-			title: { value: localize('compare.nextChange', "Go to Next Change"), original: 'Go to Next Change' },
+			title: localize2('compare.nextChange', 'Go to Next Change'),
 		}
 	});
 
@@ -403,7 +403,7 @@ function registerDiffEditorCommands(): void {
 	MenuRegistry.appendMenuItem(MenuId.CommandPalette, {
 		command: {
 			id: GOTO_PREVIOUS_CHANGE,
-			title: { value: localize('compare.previousChange', "Go to Previous Change"), original: 'Go to Previous Change' },
+			title: localize2('compare.previousChange', 'Go to Previous Change'),
 		}
 	});
 
@@ -478,7 +478,7 @@ function registerDiffEditorCommands(): void {
 			return;
 		}
 
-		const untypedDiffInput = diffInput.toUntyped({ preserveViewState: activeGroup.id });
+		const untypedDiffInput = diffInput.toUntyped({ preserveViewState: activeGroup.id, preserveResource: true });
 		if (!untypedDiffInput) {
 			return;
 		}
@@ -487,7 +487,7 @@ function registerDiffEditorCommands(): void {
 		// sure to first open the modified side if it is not
 		// yet opened. This ensures that the swapping is not
 		// bringing up a confirmation dialog to save.
-		if (diffInput.modified.isModified() && !editorService.isOpened({ resource: diffInput.modified.resource, typeId: diffInput.modified.typeId, editorId: diffInput.modified.editorId })) {
+		if (diffInput.modified.isModified() && editorService.findEditors({ resource: diffInput.modified.resource, typeId: diffInput.modified.typeId, editorId: diffInput.modified.editorId }).length === 0) {
 			await editorService.openEditor({
 				...untypedDiffInput.modified,
 				options: {
@@ -566,10 +566,7 @@ function registerDiffEditorCommands(): void {
 	MenuRegistry.appendMenuItem(MenuId.CommandPalette, {
 		command: {
 			id: TOGGLE_DIFF_SIDE_BY_SIDE,
-			title: {
-				value: localize('toggleInlineView', "Toggle Inline View"),
-				original: 'Compare: Toggle Inline View'
-			},
+			title: localize2('toggleInlineView', "Toggle Inline View"),
 			category: localize('compare', "Compare")
 		},
 		when: TextCompareEditorActiveContext
@@ -578,10 +575,7 @@ function registerDiffEditorCommands(): void {
 	MenuRegistry.appendMenuItem(MenuId.CommandPalette, {
 		command: {
 			id: DIFF_SWAP_SIDES,
-			title: {
-				value: localize('swapDiffSides', "Swap Left and Right Editor Side"),
-				original: 'Compare: Swap Left and Right Editor Side'
-			},
+			title: localize2('swapDiffSides', "Swap Left and Right Editor Side"),
 			category: localize('compare', "Compare")
 		},
 		when: TextCompareEditorActiveContext
@@ -742,6 +736,21 @@ function registerOpenEditorAPICommands(): void {
 
 		await editorService.openEditor({ resources: editor, label: title });
 	});
+
+	CommandsRegistry.registerCommand('_workbench.openMultiDiffEditor', async (accessor: ServicesAccessor, options: OpenMultiFileDiffEditorOptions) => {
+		const editorService = accessor.get(IEditorService);
+		await editorService.openEditor({
+			multiDiffSource: options.multiDiffSourceUri ? URI.revive(options.multiDiffSourceUri) : undefined,
+			resources: options.resources?.map(r => ({ original: { resource: URI.revive(r.originalUri) }, modified: { resource: URI.revive(r.modifiedUri) } })),
+			label: options.title,
+		});
+	});
+}
+
+interface OpenMultiFileDiffEditorOptions {
+	title: string;
+	multiDiffSourceUri?: UriComponents;
+	resources?: { originalUri: UriComponents; modifiedUri: UriComponents }[];
 }
 
 function registerOpenEditorAtIndexCommands(): void {
@@ -1211,7 +1220,7 @@ function registerSplitEditorInGroupCommands(): void {
 		constructor() {
 			super({
 				id: SPLIT_EDITOR_IN_GROUP,
-				title: { value: localize('splitEditorInGroup', "Split Editor in Group"), original: 'Split Editor in Group' },
+				title: localize2('splitEditorInGroup', 'Split Editor in Group'),
 				category: Categories.View,
 				precondition: ActiveEditorCanSplitInGroupContext,
 				f1: true,
@@ -1257,7 +1266,7 @@ function registerSplitEditorInGroupCommands(): void {
 		constructor() {
 			super({
 				id: JOIN_EDITOR_IN_GROUP,
-				title: { value: localize('joinEditorInGroup', "Join Editor in Group"), original: 'Join Editor in Group' },
+				title: localize2('joinEditorInGroup', 'Join Editor in Group'),
 				category: Categories.View,
 				precondition: SideBySideEditorActiveContext,
 				f1: true,
@@ -1277,7 +1286,7 @@ function registerSplitEditorInGroupCommands(): void {
 		constructor() {
 			super({
 				id: TOGGLE_SPLIT_EDITOR_IN_GROUP,
-				title: { value: localize('toggleJoinEditorInGroup', "Toggle Split Editor in Group"), original: 'Toggle Split Editor in Group' },
+				title: localize2('toggleJoinEditorInGroup', 'Toggle Split Editor in Group'),
 				category: Categories.View,
 				precondition: ContextKeyExpr.or(ActiveEditorCanSplitInGroupContext, SideBySideEditorActiveContext),
 				f1: true
@@ -1299,7 +1308,7 @@ function registerSplitEditorInGroupCommands(): void {
 		constructor() {
 			super({
 				id: TOGGLE_SPLIT_EDITOR_IN_GROUP_LAYOUT,
-				title: { value: localize('toggleSplitEditorInGroupLayout', "Toggle Layout of Split Editor in Group"), original: 'Toggle Layout of Split Editor in Group' },
+				title: localize2('toggleSplitEditorInGroupLayout', 'Toggle Layout of Split Editor in Group'),
 				category: Categories.View,
 				precondition: SideBySideEditorActiveContext,
 				f1: true
@@ -1327,7 +1336,7 @@ function registerFocusSideEditorsCommands(): void {
 		constructor() {
 			super({
 				id: FOCUS_FIRST_SIDE_EDITOR,
-				title: { value: localize('focusLeftSideEditor', "Focus First Side in Active Editor"), original: 'Focus First Side in Active Editor' },
+				title: localize2('focusLeftSideEditor', 'Focus First Side in Active Editor'),
 				category: Categories.View,
 				precondition: ContextKeyExpr.or(SideBySideEditorActiveContext, TextCompareEditorActiveContext),
 				f1: true
@@ -1350,7 +1359,7 @@ function registerFocusSideEditorsCommands(): void {
 		constructor() {
 			super({
 				id: FOCUS_SECOND_SIDE_EDITOR,
-				title: { value: localize('focusRightSideEditor', "Focus Second Side in Active Editor"), original: 'Focus Second Side in Active Editor' },
+				title: localize2('focusRightSideEditor', 'Focus Second Side in Active Editor'),
 				category: Categories.View,
 				precondition: ContextKeyExpr.or(SideBySideEditorActiveContext, TextCompareEditorActiveContext),
 				f1: true
@@ -1373,7 +1382,7 @@ function registerFocusSideEditorsCommands(): void {
 		constructor() {
 			super({
 				id: FOCUS_OTHER_SIDE_EDITOR,
-				title: { value: localize('focusOtherSideEditor', "Focus Other Side in Active Editor"), original: 'Focus Other Side in Active Editor' },
+				title: localize2('focusOtherSideEditor', 'Focus Other Side in Active Editor'),
 				category: Categories.View,
 				precondition: ContextKeyExpr.or(SideBySideEditorActiveContext, TextCompareEditorActiveContext),
 				f1: true
@@ -1436,7 +1445,7 @@ function registerOtherEditorCommands(): void {
 		constructor() {
 			super({
 				id: TOGGLE_LOCK_GROUP_COMMAND_ID,
-				title: { value: localize('toggleEditorGroupLock', "Toggle Editor Group Lock"), original: 'Toggle Editor Group Lock' },
+				title: localize2('toggleEditorGroupLock', 'Toggle Editor Group Lock'),
 				category: Categories.View,
 				f1: true
 			});
@@ -1450,7 +1459,7 @@ function registerOtherEditorCommands(): void {
 		constructor() {
 			super({
 				id: LOCK_GROUP_COMMAND_ID,
-				title: { value: localize('lockEditorGroup', "Lock Editor Group"), original: 'Lock Editor Group' },
+				title: localize2('lockEditorGroup', 'Lock Editor Group'),
 				category: Categories.View,
 				precondition: ActiveEditorGroupLockedContext.toNegated(),
 				f1: true
@@ -1465,7 +1474,7 @@ function registerOtherEditorCommands(): void {
 		constructor() {
 			super({
 				id: UNLOCK_GROUP_COMMAND_ID,
-				title: { value: localize('unlockEditorGroup', "Unlock Editor Group"), original: 'Unlock Editor Group' },
+				title: localize2('unlockEditorGroup', 'Unlock Editor Group'),
 				precondition: ActiveEditorGroupLockedContext,
 				category: Categories.View,
 				f1: true
