@@ -103,19 +103,19 @@ export class NativeAuxiliaryWindowService extends BrowserAuxiliaryWindowService 
 		// Enable `window.focus()` to work in Electron by
 		// asking the main process to focus the window.
 		// https://github.com/electron/electron/issues/25578
-		const that = this;
-		const originalWindowFocus = auxiliaryWindow.focus.bind(auxiliaryWindow);
-		auxiliaryWindow.focus = function () {
-			if (that.environmentService.extensionTestsLocationURI) {
-				return; // no focus when we are running tests from CLI
-			}
+		// const that = this;
+		// const originalWindowFocus = auxiliaryWindow.focus.bind(auxiliaryWindow);
+		// auxiliaryWindow.focus = function () {
+		// 	if (that.environmentService.extensionTestsLocationURI) {
+		// 		return; // no focus when we are running tests from CLI
+		// 	}
 
-			originalWindowFocus();
+		// 	originalWindowFocus();
 
-			if (!auxiliaryWindow.document.hasFocus()) {
-				that.nativeHostService.focusWindow({ targetWindowId: auxiliaryWindow.vscodeWindowId });
-			}
-		};
+		// 	if (!auxiliaryWindow.document.hasFocus()) {
+		// 		that.nativeHostService.focusWindow({ targetWindowId: auxiliaryWindow.vscodeWindowId });
+		// 	}
+		// };
 	}
 
 	protected override createAuxiliaryWindow(targetWindow: CodeWindow, container: HTMLElement, stylesHaveLoaded: Barrier,): AuxiliaryWindow {

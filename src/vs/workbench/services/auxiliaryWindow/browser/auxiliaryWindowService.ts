@@ -270,6 +270,16 @@ export class BrowserAuxiliaryWindowService extends Disposable implements IAuxili
 		}
 
 		const auxiliaryWindow = mainWindow.open('about:blank', undefined, `popup=yes,left=${newWindowBounds.x},top=${newWindowBounds.y},width=${newWindowBounds.width},height=${newWindowBounds.height}`);
+
+		// fill large array with random strings
+
+		// const ar = new Array(1000000);
+		// for (let i = 0; i < ar.length; i++) {
+		// 	ar[i] = Math.random().toString(36).substring(2);
+		// }
+
+		// (auxiliaryWindow as any).vscodeLarge = ar;
+
 		if (!auxiliaryWindow && isWeb) {
 			return (await this.dialogService.prompt({
 				type: Severity.Warning,

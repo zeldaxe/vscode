@@ -338,11 +338,11 @@ class EditorStatus extends Disposable {
 
 	constructor(
 		private readonly targetWindowId: number,
-		@IEditorService private readonly editorService: IEditorService,
+		@IEditorService private editorService: IEditorService,
 		@IQuickInputService private readonly quickInputService: IQuickInputService,
 		@ILanguageService private readonly languageService: ILanguageService,
 		@ITextFileService private readonly textFileService: ITextFileService,
-		@IStatusbarService private readonly statusbarService: IStatusbarService,
+		@IStatusbarService private statusbarService: IStatusbarService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IConfigurationService private readonly configurationService: IConfigurationService
 	) {
@@ -878,6 +878,14 @@ class EditorStatus extends Disposable {
 		const activeEditorPane = this.editorService.activeEditorPane;
 
 		return !!activeEditorPane && activeEditorPane === control;
+	}
+
+	override dispose(): void {
+		super.dispose();
+
+		console.log("editor status dispose");
+		this.editorService = undefined!;
+		this.statusbarService = undefined!;
 	}
 }
 

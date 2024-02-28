@@ -624,6 +624,9 @@ class StatusbarPart extends Part implements IStatusbarEntryContainer {
 	override dispose(): void {
 		this._onWillDispose.fire();
 
+		this.leftItemsContainer = undefined;
+		this.rightItemsContainer = undefined;
+
 		super.dispose();
 	}
 }

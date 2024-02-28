@@ -681,19 +681,19 @@ export class NativeWindow extends BaseWindow {
 		// Enable `window.focus()` to work in Electron by
 		// asking the main process to focus the window.
 		// https://github.com/electron/electron/issues/25578
-		const that = this;
-		const originalWindowFocus = mainWindow.focus.bind(mainWindow);
-		mainWindow.focus = function () {
-			if (that.environmentService.extensionTestsLocationURI) {
-				return; // no focus when we are running tests from CLI
-			}
+		// const that = this;
+		// const originalWindowFocus = mainWindow.focus.bind(mainWindow);
+		// mainWindow.focus = function () {
+		// 	if (that.environmentService.extensionTestsLocationURI) {
+		// 		return; // no focus when we are running tests from CLI
+		// 	}
 
-			originalWindowFocus();
+		// 	originalWindowFocus();
 
-			if (!mainWindow.document.hasFocus()) {
-				that.nativeHostService.focusWindow({ targetWindowId: getWindowId(mainWindow) });
-			}
-		};
+		// 	if (!mainWindow.document.hasFocus()) {
+		// 		that.nativeHostService.focusWindow({ targetWindowId: getWindowId(mainWindow) });
+		// 	}
+		// };
 	}
 
 	private async handleWarnings(): Promise<void> {

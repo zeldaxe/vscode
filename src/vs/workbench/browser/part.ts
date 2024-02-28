@@ -50,7 +50,7 @@ export abstract class Part extends Component implements ISerializableView {
 	) {
 		super(id, themeService, storageService);
 
-		layoutService.registerPart(this);
+		this._register(layoutService.registerPart(this));
 	}
 
 	protected override onThemeChange(theme: IColorTheme): void {
@@ -148,6 +148,15 @@ export abstract class Part extends Component implements ISerializableView {
 	abstract toJSON(): object;
 
 	//#endregion
+
+	override dispose(): void {
+		this.parent = undefined;
+		this.titleArea = undefined;
+		this.contentArea = undefined;
+		this.partLayout = undefined;
+
+		super.dispose();
+	}
 }
 
 class PartLayout {
@@ -202,6 +211,7 @@ export abstract class MultiWindowParts<T extends IMultiWindowPart> extends Compo
 
 	protected unregisterPart(part: T): void {
 		this._parts.delete(part);
+		console.log('unregisterPart', part);
 	}
 
 	getPart(container: HTMLElement): T {

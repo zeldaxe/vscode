@@ -1089,8 +1089,10 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 		});
 	}
 
-	registerPart(part: Part): void {
+	registerPart(part: Part): IDisposable {
 		this.parts.set(part.getId(), part);
+
+		return toDisposable(() => this.parts.delete(part.getId()));
 	}
 
 	protected getPart(key: Parts): Part {
