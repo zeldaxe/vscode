@@ -1350,7 +1350,7 @@ declare module 'vscode' {
 
 	/**
 	 * A complex edit that will be applied in one transaction on a TextEditor.
-	 * This holds a description of the edits and if the edits are valid (i.e. no overlapping regions, document was not changed in the meantime, etc.)
+	 * This holds a description of the edits and if the edits are valid (i.e. no overlapping regions, documents was not changed in the meantime, etc.)
 	 * they can be applied on a {@link TextDocument document} associated with a {@link TextEditor text editor}.
 	 */
 	export interface TextEditorEdit {
